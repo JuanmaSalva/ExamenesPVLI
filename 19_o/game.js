@@ -1,113 +1,76 @@
 import Bola from './bola.js'
+import Pared from './paredes.js'
+import Player from './player.js'
 
 export default class Game extends Phaser.Scene {
   constructor() {
     super({ key: 'main' });
   }
   preload() {
-    this.load.image('jugador', 'jugador.png');
-    this.load.image('bola', 'bola.png');
+    this.load.image('pared', 'pared.png');
+    this.load.image('dude', 'dude.png');
   }
 
   create() {
+    this.cameras.main.setBackgroundColor('#FFFFFF');
+
+    new Bola(this,  Math.floor(Math.random() * 1200)+100, Math.floor(Math.random() * 600)+100,50, 0);
+
+    new Pared(this, 0, 0, 50, 1600);
+    new Pared(this, 0, 0, 2800, 50);
+    new Pared(this, 1400, 0, 50, 1600);
+    new Pared(this, 0, 800, 2800, 50);
+
+    this.player = new Player(this, 500, 100, 'dude');
+
+    this.matter.world.on('collisionstart', (evento, cuerpo1, cuerpo2) => {
+      if (cuerpo1 == this.player.body || cuerpo2 == this.player.body && (cuerpo1.gameObject.type == 'Ellipse' || cuerpo2.gameObject.type == 'Ellipse')) {
+        if (cuerpo1.gameObject.type == 'Ellipse') this.destruccion(cuerpo1.gameObject);
+        else this.destruccion(cuerpo2.gameObject);
+      }
+    })
+
+    this.segundos = 30;
+    this.colisiones = 7;
+    this.cuentaAtras = this.add.text(30, 30, 'Tiempo restante: ' + this.segundos + ' colisiones: ' + this.colisiones).setColor('#000000').setFontSize(30);
+    this.time.addEvent({ delay: 1000, callback: this.segundo, callbackScope: this, loop: true });
+
     this.play = true;
-    this.paredes = this.physics.add.staticGroup();
-    this.paredes.add(this.add.rectangle(50, 0, 100, 1600, 0x0000ff));
-    this.paredes.add(this.add.rectangle(0, 50, 2600, 100, 0x0000ff));
-    this.paredes.add(this.add.rectangle(1350, 0, 100, 2000, 0x0000ff))
-    this.paredes.add(this.add.rectangle(300, 750, 2000, 100, 0x0000ff))
-
-    this.player = this.physics.add.sprite(200, 200, 'jugador');
-
-    this.cursors = this.input.keyboard.createCursorKeys();
-
-    this.cursors.up.on('down', () => {
-      if (this.play) this.player.body.setVelocityY(-160);
-    })
-    this.cursors.down.on('down', () => {
-      if (this.play) this.player.body.setVelocityY(160);
-    })
-    this.cursors.left.on('down', () => {
-      if (this.play) this.player.body.setVelocityX(-160);
-    })
-    this.cursors.right.on('down', () => {
-      if (this.play) this.player.body.setVelocityX(160);
-    })
-
-    this.cursors.up.on('up', () => {
-      this.player.body.setVelocityY(0);
-    })
-    this.cursors.down.on('up', () => {
-      this.player.body.setVelocityY(0);
-    })
-    this.cursors.left.on('up', () => {
-      this.player.body.setVelocityX(0);
-    })
-    this.cursors.right.on('up', () => {
-      this.player.body.setVelocityX(0);
-    })
-
-    this.bolas = this.add.group();
-    this.bolas.add(new Bola(this, Math.floor(Math.random() * 1100) + 150, Math.floor(Math.random() * 300) + 150, 'bola', 0));
-    this.bolas.add(new Bola(this, Math.floor(Math.random() * 1100) + 150, Math.floor(Math.random() * 300) + 150, 'bola', 0));
-
-    this.bolasRestantes = 2;
-
-    this.physics.add.collider(this.bolas, this.paredes);
-    this.physics.add.collider(this.player, this.paredes);
-
-    this.physics.add.overlap(this.player, this.bolas, this.divide, null, this);
-
-    this.space = this.input.keyboard.addKey('space');
-
-    this.space.on('down', () => {
+    this.spacio = this.input.keyboard.addKey('space');
+    this.spacio.on('down', () => {
       if (!this.play) {
         this.scene.restart();
       }
     })
 
-    this.segundos = 30;
+  }
 
-    this.cunataAtras = this.add.text(100, 100, 'Timepo restante: ' + this.segundos);
-
-    this.time.addEvent({ delay: 1000, callback: this.segundo, callbackScope: this, loop: 30 });
+  destruccion(obj) {
+    this.colisiones--;
+    if (this.colisiones == 0) {
+      this.play = false;
+      this.add.text(600, 350, 'HAS GANADO').setColor('#000000').setFontSize(30);
+      this.matter.world.pause();
+    }
+    this.cuentaAtras.text = 'Tiempo restante: ' + this.segundos + ' colisiones: ' + this.colisiones;
+    if (obj.rebotes < 2) {
+      new Bola(this, obj.x, obj.y, 50, obj.rebotes + 1);
+      new Bola(this, obj.x, obj.y, 50, obj.rebotes + 1);
+    }
+    obj.destroy();
   }
 
   segundo() {
-    if (this.segundos == 0) {
-      this.add.text(700, 375, 'HAS PERDIDO');
-      this.play = false;
-      this.player.body.setVelocityY(0);
-      this.player.body.setVelocityX(0);
-
-      var gameObjects = this.bolas.getChildren();
-      for(var i=0;i<gameObjects.length;i++){
-        gameObjects[i].body.setVelocityX(0).setVelocityY(0);
-      }
-    }
-    else {
+    if (this.play) {
       this.segundos--;
-      this.cunataAtras.text = 'Timepo restante: ' + this.segundos;
-    }
-  }
-
-  divide(player, bola) {
-    var des = bola.destrucciones + 1;
-    bola.destroy();
-    if (des < 3) {
-      this.bolas.add(new Bola(this, Math.floor(Math.random() * 1100) + 150, Math.floor(Math.random() * 300) + 150, 'bola', des));
-      this.bolas.add(new Bola(this, Math.floor(Math.random() * 1100) + 150, Math.floor(Math.random() * 300) + 150, 'bola', des));
-      this.bolasRestantes += 1;
-    }
-    else {
-      this.bolasRestantes -= 1;
-      if (this.bolasRestantes === 0) {
-        this.add.text(700, 375, 'HAS GANADO');
+      this.cuentaAtras.text = 'Tiempo restante: ' + this.segundos + ' colisiones: ' + this.colisiones;
+      if (this.segundos == 0) {
         this.play = false;
-        this.player.body.setVelocityY(0);
-        this.player.body.setVelocityX(0);
+        this.add.text(600, 350, 'HAS PERDIDO').setColor('#000000').setFontSize(30);
+        this.matter.world.pause();
       }
     }
+
   }
 
   update(time, delta) {

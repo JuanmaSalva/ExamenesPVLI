@@ -1,14 +1,13 @@
-export default class Bola extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, imag,destrucciones) { //imag es el sprite que se va a cargar
-        super(scene, x, y, imag);
+export default class Bola extends Phaser.GameObjects.Ellipse {
+    constructor(scene, x, y, diametro, rebote) {
+        super(scene, x, y, diametro, diametro, 0x00ff00);
         scene.add.existing(this);
-        scene.physics.add.existing(this);
-        this.body.setBounce(1).setVelocityX(-100).setVelocityY(-100)
-        if(destrucciones === 0) this.setScale(2);
-        else if(destrucciones === 1)this.setScale(1.5);
-        else this.setScale (1);
+        scene.matter.add.gameObject(this);
+        this.body.ignoreGravity = true;
+        this.setVelocity(Math.floor(Math.random() * 20) - 10, Math.floor(Math.random() * 20) - 10).setFrictionAir(0).setBounce(1).setMass(0.1);
+        if (rebote == 0) this.setScale(3);
+        else if (rebote == 1) this.setScale(2);
 
-        this.destrucciones = destrucciones;
+        this.rebotes = rebote;
     }
-
 }
